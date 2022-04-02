@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="sdk/scripts/VSS.SDK.min.js"></script>
+  </head>
+  <body>
+    <div class="widget">
+      <h2 class="title"></h2>
+      <div id="prs-container"></div>
+    </div>
+    <script type="text/javascript">
+      VSS.init({
+        explicitNotifyLoaded: true,
+        usePlatformStyles: true,
+      });
+
+      VSS.require(
+        [
+          'TFS/Dashboards/WidgetHelpers',
+          'TFS/WorkItemTracking/RestClient',
+          'TFS/VersionControl/GitRestClient',
+          'TFS/VersionControl/Contracts',
+        ],
+        (WidgetHelpers, WitRestClient, GitRestClient, Contracts) => {
+          WidgetHelpers.IncludeWidgetStyles();
+
+          VSS.register('ActivePrsWithClosedWits', function () {
+            const projectId = VSS.getWebContext().project.id;
+
+            const gitClient = GitRestClient.getClient();
+            const witClient = WitRestClient.getClient();
+
+            const getPullRequests = async () => {
+              var pullRequests = await gitClient.getPullRequestsByProject(
+                projectId,
+                { status: Contracts.PullRequestStatus.Active }
+              );
+            };
+
+            const fetchWorkItems = async pullRequest => {
+              var ids = pullRequest.workItemRefs;
+
+              var workItems = await witClient.getWorkItems(
+                ids,
+                ['System.Title', 'System.State'],
+                null,
+                Contracts.WorkItemExpand.All
+              );
+            };
+
+            return {
+              load: function (widgetSettings) {
+                const $title = $('h2.title');
+                $title.text('Active PRs with Closed Work Items');
+
+                return WidgetHelpers.WidgetStatusHelper.Success();
+              },
+            };
+          });
+
+          VSS.notifyLoadSucceeded();
+        }
+      );
+    </script>
+  </body>
+</html>
